@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
@@ -10,6 +11,8 @@
 #include "gflags/gflags.h"
 #include "cyber/common/log.h"
 #include "modules/localization/msf/common/io/velodyne_utility.h"
+
+#include "async_buffer.h"
 
 using Point = pcl::PointXYZI;
 using PointCloud = pcl::PointCloud<Point>;
@@ -47,6 +50,8 @@ std::vector<unsigned int> pcd_indices;
 // ndt
 pcl::NormalDistributionsTransform<Point, Point> ndt;
 
+// 
+std::unique_ptr<AsyncBuffer> async_buffer_ptr;
 
 void Init() {
   // ndt
@@ -65,6 +70,21 @@ void LoadPoses() {
 
   AINFO << "pcd_poses: " << pcd_poses.size()
         << " ,pcd_indices: " << pcd_indices.size();
+}
+
+void StartAsyncReadProcess() {
+  std::vector<std::string> file_paths;
+  for (unsigned int index : pcd_indices) {
+    std::ostringstream ss;
+    ss << FLAGS_workspace_dir << "/" << index << ".pcd";
+    std::string pcd_file_path = ss.str();
+    file_paths.push_back(pcd_file_path);
+  }
+
+  AINFO << "Pcd file size: " << file_paths.size();
+
+  async_buffer_ptr.reset(new AsyncBuffer(file_paths));
+  async_buffer_ptr->Init();
 }
 
 void RangeFilter(PointCloudConstPtr input, PointCloudPtr output) {
@@ -145,7 +165,10 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   int final_num_iteration = ndt.getFinalNumIteration();
   double transformation_probability = ndt.getTransformationProbability();
 
-  AINFO << "NDT fitness_score: " << fitness_score
+  static int sequence_id = 0;
+  sequence_id++;
+  AINFO << "NDT sequence id: " << sequence_id
+        << " fitness_score: " << fitness_score
         << " has_converged: " << has_converged
         << " final_num_iteration: " << final_num_iteration
         << " transformation_probability: " << transformation_probability;
@@ -175,21 +198,24 @@ void SaveMap() {
 int main(int argc, char **argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
 
+  auto start_time = std::chrono::system_clock::now();
+
   Init();
   LoadPoses();
 
-  for (unsigned int index : pcd_indices) {
-    std::ostringstream ss;
-    ss << FLAGS_workspace_dir << "/" << index << ".pcd";
-    std::string pcd_file_path = ss.str();
+  StartAsyncReadProcess();
 
-    AINFO << "Start to process " << pcd_file_path;
-
-    PointCloudPtr cloud(new PointCloud());
-    pcl::io::loadPCDFile(pcd_file_path, *cloud);
-    
-    LidarProcess(cloud);
+  while(!async_buffer_ptr->IsEnd()) {
+    PointCloudPtr cloud_ptr = async_buffer_ptr->Get();
+    if (cloud_ptr) {
+      LidarProcess(cloud_ptr);
+    }
   }
 
   SaveMap();
+
+  auto end_time = std::chrono::system_clock::now();
+
+  std::chrono::duration<double> diff = end_time - start_time;
+  AINFO << "NDT mapping cost:" << diff.count() << " s";
 }
