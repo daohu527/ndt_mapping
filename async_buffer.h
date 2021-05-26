@@ -1,6 +1,6 @@
 #include <mutex>
-#include <string>
 #include <queue>
+#include <string>
 #include <vector>
 
 #include <pcl/io/pcd_io.h>

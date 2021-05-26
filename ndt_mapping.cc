@@ -214,8 +214,8 @@ int main(int argc, char **argv) {
 
   SaveMap();
 
+  // Performance
   auto end_time = std::chrono::system_clock::now();
-
   std::chrono::duration<double> diff = end_time - start_time;
   AINFO << "NDT mapping cost:" << diff.count() << " s";
 }
