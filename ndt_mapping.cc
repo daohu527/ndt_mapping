@@ -189,10 +189,42 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   // Publish pose
 }
 
+void AlignCoordinates() {
+
+}
+
 void SaveMap() {
   CHECK(map_ptr != nullptr) << "map is null";
 
-  pcl::io::savePCDFileBinaryCompressed(FLAGS_output_file, *map_ptr);
+  // Align coordinates.
+  // The initial coordinates are the pose of the first frame
+  Eigen::Affine3d init_pose = pcd_poses[0];
+  Eigen::Affine3d align_pose = Eigen::Affine3d::Identity();
+  align_pose.linear() = init_pose.linear();
+
+  AINFO << "Align matrix: " << align_pose.matrix();
+
+  // Quaterniond
+  Eigen::Quaterniond quaterniond = (Eigen::Quaterniond)align_pose.linear();
+  AINFO << "Align quaterniond x: " << quaterniond.x() 
+        << " y: " << quaterniond.y() 
+        << " z: " << quaterniond.z()
+        << " w: " << quaterniond.w();
+  
+  // Rotation
+  auto euler = quaterniond.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
+  ADEBUG << "Align rotation roll, pitch, yaw " << euler;
+
+  PointCloudPtr align_map_ptr(new PointCloud());
+  pcl::transformPointCloud(*map_ptr, *align_map_ptr, align_pose.matrix().cast<double>());
+
+  AINFO << std::setprecision(15) << "UTM relative coordinates"
+        << " x: " << init_pose.translation().x()
+        << " y: " << init_pose.translation().y()
+        << " z: " << init_pose.translation().z();
+
+  // Save map
+  pcl::io::savePCDFileBinaryCompressed(FLAGS_output_file, *align_map_ptr);
 }
 
 int main(int argc, char **argv) {
