@@ -189,15 +189,10 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   // Publish pose
 }
 
-void AlignCoordinates() {
-
-}
-
 void SaveMap() {
-  CHECK(map_ptr != nullptr) << "map is null";
-
   // Align coordinates.
   // The initial coordinates are the pose of the first frame
+  CHECK(pcd_poses.size() != 0) << "pcd pose is empty";
   Eigen::Affine3d init_pose = pcd_poses[0];
   Eigen::Affine3d align_pose = Eigen::Affine3d::Identity();
   align_pose.linear() = init_pose.linear();
@@ -215,6 +210,7 @@ void SaveMap() {
   auto euler = quaterniond.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
   ADEBUG << "Align rotation roll, pitch, yaw " << euler;
 
+  CHECK(map_ptr != nullptr) << "map is null";
   PointCloudPtr align_map_ptr(new PointCloud());
   pcl::transformPointCloud(*map_ptr, *align_map_ptr, align_pose.matrix().cast<double>());
 
