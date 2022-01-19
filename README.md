@@ -1,11 +1,13 @@
 ## Quick Start
-This is Baidu apollo offline mapping tool. 
+This is Baidu apollo offline mapping tool.
 
 ## Environment
-The environment for creating the map is as follows, you need to be equipped with lidar and GNSS(IMU+GPS). 
+The environment for creating the map is as follows, you need to be equipped with lidar and GNSS(IMU+GPS).
 * RoboSense RS-LiDAR-32
 * GNSS
 * Apollo 5.0
+
+> Created branches with different apollo versions, please pull the branch based on the apollo version. eg: apollo 5.0 pull r5.0.0, apollo6.0 pull r6.0.0.
 
 ## Collect data
 First you need to collect the sensor data needed for mapping. If your vehicle has been installed with Apollo5.0, you can use below command to record the bag.
@@ -37,7 +39,7 @@ Use the following command to create a map, the result of the map is default save
 ./bazel-bin/modules/localization/msf/local_tool/ndt_mapping/ndt_mapping
 ```
 
-You can also set some parameters in the command line according to your needs 
+You can also set some parameters in the command line according to your needs
 ```
 ./bazel-bin/modules/localization/msf/local_tool/ndt_mapping/ndt_mapping -output_file=xxx
 ```
@@ -63,6 +65,6 @@ The parameters list
 
 ## Example
 The following is the result of the mapping of the underground parking lot.
-![parking_lot](img/parking_lot.jpg)  
+![parking_lot](img/parking_lot.jpg)
 
 
