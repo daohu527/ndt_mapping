@@ -7,6 +7,8 @@ The environment for creating the map is as follows, you need to be equipped with
 * GNSS
 * Apollo 5.0
 
+> Created branches with different apollo versions, please pull the branch based on the apollo version. eg: apollo 5.0 pull r5.0.0, apollo6.0 pull r6.0.0.
+
 ## Collect data
 First you need to collect the sensor data needed for mapping. If your vehicle has been installed with Apollo5.0, you can use below command to record the bag.
 ```
@@ -72,3 +74,5 @@ The parameters list
 ## Example
 The following is the result of the mapping of the underground parking lot.
 ![parking_lot](img/parking_lot.jpg)
+
+
