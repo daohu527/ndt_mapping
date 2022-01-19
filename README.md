@@ -1,8 +1,8 @@
 ## Quick Start
-This is Baidu apollo offline mapping tool. 
+This is Baidu apollo offline mapping tool.
 
 ## Environment
-The environment for creating the map is as follows, you need to be equipped with lidar and GNSS(IMU+GPS). 
+The environment for creating the map is as follows, you need to be equipped with lidar and GNSS(IMU+GPS).
 * RoboSense RS-LiDAR-32
 * GNSS
 * Apollo 5.0
@@ -18,6 +18,14 @@ After collecting the data, you can start making a map by following the steps bel
 Compile the code according to the following steps.
 1. Copy the entire directory `ndt_mapping` to apollo's `modules/localization/msf/local_tool/`
 2. Build the localization module in apollo
+```
+./apollo.sh build localization   // apollo 6.0
+
+// or compile separately
+
+bazel build modules/localization/msf/local_tool/ndt_mapping
+```
+> It should be noted that using "bazel build xxx" will clear the compilation cache, and the next time you need to compile apollo because there is no cache, it will be recompiled, which is very time-consuming.
 
 #### 1.Unzip the bag
 Extract the pcd file and pose file from the bag. You can use multiple "--bag_file" to extract multiple bag files. The decompressed file is saved in `--out_folder`.
@@ -37,7 +45,7 @@ Use the following command to create a map, the result of the map is default save
 ./bazel-bin/modules/localization/msf/local_tool/ndt_mapping/ndt_mapping
 ```
 
-You can also set some parameters in the command line according to your needs 
+You can also set some parameters in the command line according to your needs
 ```
 ./bazel-bin/modules/localization/msf/local_tool/ndt_mapping/ndt_mapping -output_file=xxx
 ```
@@ -63,6 +71,4 @@ The parameters list
 
 ## Example
 The following is the result of the mapping of the underground parking lot.
-![parking_lot](img/parking_lot.jpg)  
-
-
+![parking_lot](img/parking_lot.jpg)

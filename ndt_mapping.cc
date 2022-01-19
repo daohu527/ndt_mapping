@@ -43,14 +43,14 @@ Eigen::Affine3d current_pose = Eigen::Affine3d::Identity();
 Eigen::Affine3d previous_pose = Eigen::Affine3d::Identity();
 
 // lidar pose
-std::vector<Eigen::Affine3d> pcd_poses;
+::apollo::common::EigenAffine3dVec pcd_poses;
 std::vector<double> time_stamps;
 std::vector<unsigned int> pcd_indices;
 
 // ndt
 pcl::NormalDistributionsTransform<Point, Point> ndt;
 
-// 
+//
 std::unique_ptr<AsyncBuffer> async_buffer_ptr;
 
 void Init() {
@@ -88,7 +88,7 @@ void StartAsyncReadProcess() {
 }
 
 void RangeFilter(PointCloudConstPtr input, PointCloudPtr output) {
-  for (PointCloud::const_iterator item = input->begin(); item != input->end(); 
+  for (PointCloud::const_iterator item = input->begin(); item != input->end();
         item++) {
     Point point;
     point.x = item->x;
@@ -106,7 +106,7 @@ void RangeFilter(PointCloudConstPtr input, PointCloudPtr output) {
 void VoxelFilter(PointCloudConstPtr input, PointCloudPtr output) {
   pcl::VoxelGrid<Point> voxel_grid_filter;
   float voxel_leaf_size = static_cast<float>(FLAGS_voxel_leaf_size);
-  voxel_grid_filter.setLeafSize(voxel_leaf_size, voxel_leaf_size, 
+  voxel_grid_filter.setLeafSize(voxel_leaf_size, voxel_leaf_size,
       voxel_leaf_size);
   voxel_grid_filter.setInputCloud(input);
   voxel_grid_filter.filter(*output);
@@ -136,7 +136,7 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   PointCloudPtr scan_ptr(new PointCloud());
   RangeFilter(cloud_ptr, scan_ptr);
 
-  // When creating the map for the first time, 
+  // When creating the map for the first time,
   // get the first frame and add it to the map, then return
   if (is_first_map) {
     *map_ptr += *scan_ptr;
@@ -153,7 +153,7 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   // Get the relative pose between 2 frames
   Eigen::Affine3d relative_pose = GetLidarRelativePose();
   // Calculate the guess pose based on the position of the previous frame
-  Eigen::Matrix4f guess_pose = 
+  Eigen::Matrix4f guess_pose =
       (previous_pose * relative_pose).matrix().cast<float>();
 
   PointCloudPtr output_cloud(new PointCloud());
@@ -201,11 +201,11 @@ void SaveMap() {
 
   // Quaterniond
   Eigen::Quaterniond quaterniond = (Eigen::Quaterniond)align_pose.linear();
-  AINFO << "Align quaterniond x: " << quaterniond.x() 
-        << " y: " << quaterniond.y() 
+  AINFO << "Align quaterniond x: " << quaterniond.x()
+        << " y: " << quaterniond.y()
         << " z: " << quaterniond.z()
         << " w: " << quaterniond.w();
-  
+
   // Rotation
   auto euler = quaterniond.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
   ADEBUG << "Align rotation roll, pitch, yaw " << euler;
