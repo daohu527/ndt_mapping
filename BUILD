@@ -11,8 +11,8 @@ cc_library(
     "async_buffer.h",
   ],
   deps = [
-    "@pcl",
-    "@eigen",    
+    "@local_config_pcl//:pcl",
+    "@eigen",
   ]
 )
 
@@ -21,13 +21,12 @@ cc_binary(
     srcs = [
         "ndt_mapping.cc",
     ],
-    copts = ["-DMODULE_NAME=\\\"ndt_mapping\\\""],    
+    copts = ["-DMODULE_NAME=\\\"ndt_mapping\\\""],
     deps = [
       ":async_buffer",
       "//cyber/common:log",
-      "//modules/localization/msf/common/io:localization_msf_common_io",
+      "//modules/localization/msf/common/io:common_io",
       "//external:gflags",
-      "@pcl",
       "@eigen",
     ],
 )
