@@ -7,6 +7,7 @@ The environment for creating the map is as follows, you need to be equipped with
 * GNSS
 * Apollo 5.0
 
+**Pls use Apollo 5.0 for now !!! 6.0 causes a segment fault**   
 > Created branches with different apollo versions, please pull the branch based on the apollo version. eg: apollo 5.0 pull r5.0.0, apollo6.0 pull r6.0.0.
 
 ## Collect data
