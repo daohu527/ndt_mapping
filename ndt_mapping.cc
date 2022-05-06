@@ -57,7 +57,6 @@
 
 #include "gflags/gflags.h"
 #include "cyber/common/log.h"
-#include "modules/localization/msf/common/io/velodyne_utility.h"
 
 #include "async_buffer.h"
 
@@ -90,7 +89,7 @@ Eigen::Affine3d current_pose = Eigen::Affine3d::Identity();
 Eigen::Affine3d previous_pose = Eigen::Affine3d::Identity();
 
 // lidar pose
-::apollo::common::EigenAffine3dVec pcd_poses;
+std::vector<Eigen::Affine3d, Eigen::aligned_allocator<Eigen::Affine3d>> pcd_poses;
 std::vector<double> time_stamps;
 std::vector<unsigned int> pcd_indices;
 
@@ -108,12 +107,40 @@ void Init() {
   ndt.setMaximumIterations(FLAGS_max_iter);
 }
 
+void LoadPcdPoses(const std::string& file_path,
+                  std::vector<Eigen::Affine3d, Eigen::aligned_allocator<Eigen::Affine3d>>* poses,
+                  std::vector<double>* timestamps,
+                  std::vector<unsigned int>* pcd_indices) {
+  poses->clear();
+  timestamps->clear();
+  pcd_indices->clear();
+
+  FILE* file = fopen(file_path.c_str(), "r");
+  if (file) {
+    unsigned int index;
+    double timestamp;
+    double x, y, z;
+    double qx, qy, qz, qr;
+    static constexpr int kSize = 9;
+    while (fscanf(file, "%u %lf %lf %lf %lf %lf %lf %lf %lf\n", &index,
+                  &timestamp, &x, &y, &z, &qx, &qy, &qz, &qr) == kSize) {
+      Eigen::Translation3d trans(Eigen::Vector3d(x, y, z));
+      Eigen::Quaterniond quat(qr, qx, qy, qz);
+      poses->push_back(trans * quat);
+      timestamps->push_back(timestamp);
+      pcd_indices->push_back(index);
+    }
+    fclose(file);
+  } else {
+    AERROR << "Can't open file to read: " << file_path;
+  }
+}
+
 // load all poses from file
 void LoadPoses() {
   std::string pose_file = FLAGS_workspace_dir + "/poses.txt";
 
-  apollo::localization::msf::velodyne::LoadPcdPoses(pose_file,
-      &pcd_poses, &time_stamps, &pcd_indices);
+  LoadPcdPoses(pose_file, &pcd_poses, &time_stamps, &pcd_indices);
 
   AINFO << "pcd_poses: " << pcd_poses.size()
         << " ,pcd_indices: " << pcd_indices.size();
@@ -207,7 +234,7 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   ndt.align(*output_cloud, guess_pose);
 
   double fitness_score = ndt.getFitnessScore();
-  Eigen::Matrix4d t_localizer = ndt.getFinalTransformation().cast<double>();
+  Eigen::Matrix4f t_localizer = ndt.getFinalTransformation();
   bool has_converged = ndt.hasConverged();
   int final_num_iteration = ndt.getFinalNumIteration();
   double transformation_probability = ndt.getTransformationProbability();
@@ -220,7 +247,7 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
         << " final_num_iteration: " << final_num_iteration
         << " transformation_probability: " << transformation_probability;
 
-  current_pose = t_localizer;
+  current_pose = t_localizer.cast<double>();
   previous_pose = current_pose;
 
   double shift = SquaredDistance(current_pose, added_pose);
@@ -241,13 +268,13 @@ void SaveMap() {
   // The initial coordinates are the pose of the first frame
   CHECK(pcd_poses.size() != 0) << "pcd pose is empty";
   Eigen::Affine3d init_pose = pcd_poses[0];
-  Eigen::Affine3d align_pose = Eigen::Affine3d::Identity();
-  align_pose.linear() = init_pose.linear();
+  Eigen::Affine3f align_pose = Eigen::Affine3f::Identity();
+  align_pose.linear() = init_pose.cast<float>().linear();
 
   AINFO << "Align matrix: " << align_pose.matrix();
 
   // Quaterniond
-  Eigen::Quaterniond quaterniond = (Eigen::Quaterniond)align_pose.linear();
+  Eigen::Quaterniond quaterniond = (Eigen::Quaterniond)init_pose.linear();
   AINFO << "Align quaterniond x: " << quaterniond.x()
         << " y: " << quaterniond.y()
         << " z: " << quaterniond.z()
@@ -259,7 +286,7 @@ void SaveMap() {
 
   CHECK(map_ptr != nullptr) << "map is null";
   PointCloudPtr align_map_ptr(new PointCloud());
-  pcl::transformPointCloud(*map_ptr, *align_map_ptr, align_pose.matrix().cast<double>());
+  pcl::transformPointCloud(*map_ptr, *align_map_ptr, align_pose.matrix());
 
   AINFO << std::setprecision(15) << "UTM relative coordinates"
         << " x: " << init_pose.translation().x()
