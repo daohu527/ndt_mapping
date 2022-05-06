@@ -14,7 +14,7 @@ cc_library(
     "-lpthread",
   ],
   deps = [
-    "@pcl",
+    "@local_config_pcl//:pcl",
     "@eigen",
   ]
 )
@@ -33,7 +33,7 @@ cc_binary(
       ":async_buffer",
       "//cyber/common:log",
       "//external:gflags",
-      "@pcl",
+      "@local_config_pcl//:pcl",
       "@eigen",
     ],
 )
