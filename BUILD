@@ -10,8 +10,11 @@ cc_library(
   hdrs = [
     "async_buffer.h",
   ],
+  linkopts = [
+    "-lpthread",
+  ],
   deps = [
-    "@local_config_pcl//:pcl",
+    "@pcl",
     "@eigen",
   ]
 )
@@ -19,14 +22,18 @@ cc_library(
 cc_binary(
     name = "ndt_mapping",
     srcs = [
-        "ndt_mapping.cc",
+      "ndt_mapping.cc",
+    ],
+    linkopts = [
+      "-L/usr/local/apollo/boost/lib",
+      "-llz4",
     ],
     copts = ["-DMODULE_NAME=\\\"ndt_mapping\\\""],
     deps = [
       ":async_buffer",
       "//cyber/common:log",
-      "//modules/localization/msf/common/io:common_io",
       "//external:gflags",
+      "@pcl",
       "@eigen",
     ],
 )
