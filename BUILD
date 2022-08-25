@@ -2,35 +2,18 @@ load("//tools:cpplint.bzl", "cpplint")
 
 package(default_visibility = ["//visibility:public"])
 
-cc_library(
-  name = "async_buffer",
-  srcs = [
-    "async_buffer.cc",
-  ],
-  hdrs = [
-    "async_buffer.h",
-  ],
-  linkopts = [
-    "-lpthread",
-  ],
-  deps = [
-    "@pcl",
-    "@eigen",
-  ]
-)
 
 cc_binary(
-    name = "ndt_mapping",
+    name = "ndt_mapping_component",
     srcs = [
-      "ndt_mapping.cc",
+      "ndt_mapping_component.cc",
+      "ndt_mapping_component.h",
     ],
     linkopts = [
-      "-L/usr/local/apollo/boost/lib",
       "-llz4",
     ],
     copts = ["-DMODULE_NAME=\\\"ndt_mapping\\\""],
     deps = [
-      ":async_buffer",
       "//cyber/common:log",
       "//external:gflags",
       "@pcl",

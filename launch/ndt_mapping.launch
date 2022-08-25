@@ -1,0 +1,11 @@
+<cyber>
+    <desc>cyber modules list config</desc>
+    <version>1.0.0</version>
+    <module>
+        <name>ndt_mapping</name>
+        <dag_conf>/apollo/modules/localization/ndt_mapping/dag/ndt_mapping.dag</dag_conf>
+        <!-- if not set, use default process -->
+        <process_name>ndt_mapping</process_name>
+        <version>1.0.0</version>
+    </module>
+</cyber>

@@ -1,0 +1,15 @@
+module_config {
+  module_library : "/apollo/bazel-bin/apollo/modules/localization/ndt_mapping/ndt_mapping_component.so"
+
+  components {
+    class_name : "NDTMappingComponent"
+    config {
+      name: "NDTMappingComponent"
+      config_file_path: "/apollo/modules/perception/production/conf/perception/lidar/velodyne128_detection_conf.pb.txt"
+      flag_file_path: "/apollo/modules/perception/production/conf/perception/perception_common.flag"
+      readers {
+        channel: "/apollo/sensor/lidar128/compensator/PointCloud2"
+      }
+    }
+  }
+}

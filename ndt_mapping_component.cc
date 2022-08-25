@@ -60,10 +60,10 @@
 
 #include "async_buffer.h"
 
-using Point = pcl::PointXYZI;
-using PointCloud = pcl::PointCloud<Point>;
-using PointCloudPtr = pcl::PointCloud<Point>::Ptr;
-using PointCloudConstPtr = const pcl::PointCloud<Point>::Ptr;
+#include "ndt_mapping_component.h"
+
+
+
 
 // filter
 DEFINE_double(min_scan_range, 25.0, "the square of the min scan range");
@@ -99,7 +99,7 @@ pcl::NormalDistributionsTransform<Point, Point> ndt;
 //
 std::unique_ptr<AsyncBuffer> async_buffer_ptr;
 
-void Init() {
+bool NDTMappingComponent::Init() {
   // ndt
   ndt.setTransformationEpsilon(FLAGS_trans_eps);
   ndt.setStepSize(FLAGS_step_size);
@@ -107,61 +107,15 @@ void Init() {
   ndt.setMaximumIterations(FLAGS_max_iter);
 }
 
-void LoadPcdPoses(const std::string& file_path,
-                  std::vector<Eigen::Affine3d, Eigen::aligned_allocator<Eigen::Affine3d>>* poses,
-                  std::vector<double>* timestamps,
-                  std::vector<unsigned int>* pcd_indices) {
-  poses->clear();
-  timestamps->clear();
-  pcd_indices->clear();
+bool NDTMappingComponent::Proc(
+    const std::shared_ptr<drivers::PointCloud>& message) {
 
-  FILE* file = fopen(file_path.c_str(), "r");
-  if (file) {
-    unsigned int index;
-    double timestamp;
-    double x, y, z;
-    double qx, qy, qz, qr;
-    static constexpr int kSize = 9;
-    while (fscanf(file, "%u %lf %lf %lf %lf %lf %lf %lf %lf\n", &index,
-                  &timestamp, &x, &y, &z, &qx, &qy, &qz, &qr) == kSize) {
-      Eigen::Translation3d trans(Eigen::Vector3d(x, y, z));
-      Eigen::Quaterniond quat(qr, qx, qy, qz);
-      poses->push_back(trans * quat);
-      timestamps->push_back(timestamp);
-      pcd_indices->push_back(index);
-    }
-    fclose(file);
-  } else {
-    AERROR << "Can't open file to read: " << file_path;
-  }
+  LidarProcess();
 }
 
-// load all poses from file
-void LoadPoses() {
-  std::string pose_file = FLAGS_workspace_dir + "/poses.txt";
-
-  LoadPcdPoses(pose_file, &pcd_poses, &time_stamps, &pcd_indices);
-
-  AINFO << "pcd_poses: " << pcd_poses.size()
-        << " ,pcd_indices: " << pcd_indices.size();
-}
-
-void StartAsyncReadProcess() {
-  std::vector<std::string> file_paths;
-  for (unsigned int index : pcd_indices) {
-    std::ostringstream ss;
-    ss << FLAGS_workspace_dir << "/" << index << ".pcd";
-    std::string pcd_file_path = ss.str();
-    file_paths.push_back(pcd_file_path);
-  }
-
-  AINFO << "Pcd file size: " << file_paths.size();
-
-  async_buffer_ptr.reset(new AsyncBuffer(file_paths));
-  async_buffer_ptr->Init();
-}
-
-void RangeFilter(PointCloudConstPtr input, PointCloudPtr output) {
+void NDTMappingComponent::RangeFilter(
+    PointCloudConstPtr input,
+    PointCloudPtr output) {
   for (PointCloud::const_iterator item = input->begin(); item != input->end();
         item++) {
     Point point;
@@ -177,7 +131,9 @@ void RangeFilter(PointCloudConstPtr input, PointCloudPtr output) {
   }
 }
 
-void VoxelFilter(PointCloudConstPtr input, PointCloudPtr output) {
+void NDTMappingComponent::VoxelFilter(
+    PointCloudConstPtr input,
+    PointCloudPtr output) {
   pcl::VoxelGrid<Point> voxel_grid_filter;
   float voxel_leaf_size = static_cast<float>(FLAGS_voxel_leaf_size);
   voxel_grid_filter.setLeafSize(voxel_leaf_size, voxel_leaf_size,
@@ -186,17 +142,9 @@ void VoxelFilter(PointCloudConstPtr input, PointCloudPtr output) {
   voxel_grid_filter.filter(*output);
 }
 
-Eigen::Affine3d GetLidarRelativePose() {
-  static unsigned int index = 1;
-  Eigen::Affine3d relative_pose;
-  if (index < pcd_poses.size()) {
-    relative_pose = pcd_poses[index-1].inverse() * pcd_poses[index];
-  }
-  index++;
-  return relative_pose;
-}
-
-double SquaredDistance(Eigen::Affine3d first, Eigen::Affine3d second) {
+double NDTMappingComponent::SquaredDistance(
+    const Eigen::Affine3d& first,
+    const Eigen::Affine3d& second) {
   Eigen::Translation3d first_transd(first.translation());
   Eigen::Translation3d second_transd(second.translation());
 
@@ -204,7 +152,7 @@ double SquaredDistance(Eigen::Affine3d first, Eigen::Affine3d second) {
             + std::pow(first_transd.y() - second_transd.y(), 2.0);
 }
 
-void LidarProcess(PointCloudPtr cloud_ptr) {
+void NDTMappingComponent::LidarProcess(PointCloudConstPtr cloud_ptr) {
   CHECK(cloud_ptr != nullptr) << "cloud nullptr!";
 
   PointCloudPtr scan_ptr(new PointCloud());
@@ -225,7 +173,8 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   ndt.setInputTarget(map_ptr);
 
   // Get the relative pose between 2 frames
-  Eigen::Affine3d relative_pose = GetLidarRelativePose();
+  Eigen::Affine3d relative_pose = pre_pose.inverse() * cur_pose;
+
   // Calculate the guess pose based on the position of the previous frame
   Eigen::Matrix4f guess_pose =
       (previous_pose * relative_pose).matrix().cast<float>();
