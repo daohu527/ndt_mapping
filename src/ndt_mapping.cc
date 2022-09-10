@@ -45,9 +45,10 @@
 */
 
 
+#include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
@@ -56,7 +57,6 @@
 #include <pcl/registration/ndt.h>
 
 #include "gflags/gflags.h"
-#include "cyber/common/log.h"
 
 #include "async_buffer.h"
 
@@ -132,7 +132,7 @@ void LoadPcdPoses(const std::string& file_path,
     }
     fclose(file);
   } else {
-    AERROR << "Can't open file to read: " << file_path;
+    std::cout << "Can't open file to read: " << file_path << std::endl;
   }
 }
 
@@ -142,8 +142,8 @@ void LoadPoses() {
 
   LoadPcdPoses(pose_file, &pcd_poses, &time_stamps, &pcd_indices);
 
-  AINFO << "pcd_poses: " << pcd_poses.size()
-        << " ,pcd_indices: " << pcd_indices.size();
+  std::cout << "pcd_poses: " << pcd_poses.size()
+        << " ,pcd_indices: " << pcd_indices.size() << std::endl;
 }
 
 void StartAsyncReadProcess() {
@@ -155,7 +155,7 @@ void StartAsyncReadProcess() {
     file_paths.push_back(pcd_file_path);
   }
 
-  AINFO << "Pcd file size: " << file_paths.size();
+  std::cout << "Pcd file size: " << file_paths.size() << std::endl;
 
   async_buffer_ptr.reset(new AsyncBuffer(file_paths));
   async_buffer_ptr->Init();
@@ -205,7 +205,7 @@ double SquaredDistance(Eigen::Affine3d first, Eigen::Affine3d second) {
 }
 
 void LidarProcess(PointCloudPtr cloud_ptr) {
-  CHECK(cloud_ptr != nullptr) << "cloud nullptr!";
+  // CHECK(cloud_ptr != nullptr) << "cloud nullptr!";
 
   PointCloudPtr scan_ptr(new PointCloud());
   RangeFilter(cloud_ptr, scan_ptr);
@@ -241,11 +241,12 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
 
   static int sequence_id = 0;
   sequence_id++;
-  AINFO << "NDT sequence id: " << sequence_id
+  std::cout << "NDT sequence id: " << sequence_id
         << " fitness_score: " << fitness_score
         << " has_converged: " << has_converged
         << " final_num_iteration: " << final_num_iteration
-        << " transformation_probability: " << transformation_probability;
+        << " transformation_probability: " << transformation_probability
+        << std::endl;
 
   current_pose = t_localizer.cast<double>();
   previous_pose = current_pose;
@@ -266,32 +267,33 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
 void SaveMap() {
   // Align coordinates.
   // The initial coordinates are the pose of the first frame
-  CHECK(pcd_poses.size() != 0) << "pcd pose is empty";
+  // CHECK(pcd_poses.size() != 0) << "pcd pose is empty";
   Eigen::Affine3d init_pose = pcd_poses[0];
   Eigen::Affine3f align_pose = Eigen::Affine3f::Identity();
   align_pose.linear() = init_pose.cast<float>().linear();
 
-  AINFO << "Align matrix: " << align_pose.matrix();
+  std::cout << "Align matrix: " << align_pose.matrix() << std::endl;
 
   // Quaterniond
   Eigen::Quaterniond quaterniond = (Eigen::Quaterniond)init_pose.linear();
-  AINFO << "Align quaterniond x: " << quaterniond.x()
+  std::cout << "Align quaterniond x: " << quaterniond.x()
         << " y: " << quaterniond.y()
         << " z: " << quaterniond.z()
-        << " w: " << quaterniond.w();
+        << " w: " << quaterniond.w()
+        << std::endl;
 
   // Rotation
   auto euler = quaterniond.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
-  ADEBUG << "Align rotation roll, pitch, yaw " << euler;
+  std::cout << "Align rotation roll, pitch, yaw " << euler << std::endl;
 
-  CHECK(map_ptr != nullptr) << "map is null";
+  // CHECK(map_ptr != nullptr) << "map is null";
   PointCloudPtr align_map_ptr(new PointCloud());
   pcl::transformPointCloud(*map_ptr, *align_map_ptr, align_pose.matrix());
 
-  AINFO << std::setprecision(15) << "UTM relative coordinates"
+  std::cout << std::setprecision(15) << "UTM relative coordinates"
         << " x: " << init_pose.translation().x()
         << " y: " << init_pose.translation().y()
-        << " z: " << init_pose.translation().z();
+        << " z: " << init_pose.translation().z() << std::endl;
 
   // Save map
   pcl::io::savePCDFileBinaryCompressed(FLAGS_output_file, *align_map_ptr);
@@ -319,5 +321,5 @@ int main(int argc, char **argv) {
   // Performance
   auto end_time = std::chrono::system_clock::now();
   std::chrono::duration<double> diff = end_time - start_time;
-  AINFO << "NDT mapping cost:" << diff.count() << " s";
+  std::cout << "NDT mapping cost:" << diff.count() << " s" << std::endl;
 }

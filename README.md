@@ -7,7 +7,7 @@ The environment for creating the map is as follows, you need to be equipped with
 * GNSS
 * Apollo 5.0
 
-**Pls use Apollo 5.0 for now !!! 6.0 causes a segment fault**   
+**Pls use Apollo 5.0 for now !!! 6.0 causes a segment fault**
 > Created branches with different apollo versions, please pull the branch based on the apollo version. eg: apollo 5.0 pull r5.0.0, apollo6.0 pull r6.0.0.
 
 ## Collect data
@@ -19,16 +19,10 @@ After collecting the data, you can start making a map by following the steps bel
 
 ## How to run
 Compile the code according to the following steps.
-1. Copy the entire directory `ndt_mapping` to apollo's `modules/localization/msf/local_tool/`
-2. Build the localization module in apollo
-```
+1. Build the localization module in apollo
+```shell
 ./apollo.sh build localization   // apollo 6.0
-
-// or compile separately
-
-bazel build modules/localization/msf/local_tool/ndt_mapping
 ```
-> It should be noted that using "bazel build xxx" will clear the compilation cache, and the next time you need to compile apollo because there is no cache, it will be recompiled, which is very time-consuming.
 
 #### 1.Unzip the bag
 Extract the pcd file and pose file from the bag. You can use multiple "--bag_file" to extract multiple bag files. The decompressed file is saved in `--out_folder`.
@@ -43,14 +37,14 @@ Interpolate the pose according to the external parameters and timestamp of the l
 ```
 
 #### 3.NDT mapping
-Use the following command to create a map, the result of the map is default saved in "data/output.pcd"
-```
-./bazel-bin/modules/localization/msf/local_tool/ndt_mapping/ndt_mapping
-```
+Then copy the above "data" dir to "ndt_mapping/data/". Use the following command to create the map, the result of the map is default saved in "data/output.pcd"
+```shell
+bash docker/dev_into.sh
 
-You can also set some parameters in the command line according to your needs
-```
-./bazel-bin/modules/localization/msf/local_tool/ndt_mapping/ndt_mapping -output_file=xxx
+# in docker
+cd ndt_mapping/
+bazel build src/ndt_mapping
+./bazel-bin/src/ndt_mapping
 ```
 
 The parameters list
