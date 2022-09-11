@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     libgflags-dev \
     libpcl-dev \
     libeigen3-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ln -s /usr/include/pcl-1.8/pcl /usr/include/pcl
@@ -18,13 +19,14 @@ RUN apt-get update && apt-get install -y \
     g++ \
     unzip \
     zip \
-    curl \
+    wget \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # ARG BAZEL_VERSION=5.3.0
 # ARG BAZEL_INSTALL_FILE=bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh
 
-# RUN curl https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_INSTALL_FILE}
+# RUN wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/${BAZEL_INSTALL_FILE}
 
 COPY bazel-5.3.0-installer-linux-x86_64.sh .
 
