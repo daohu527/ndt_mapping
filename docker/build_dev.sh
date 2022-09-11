@@ -5,8 +5,6 @@ set -e
 REPO=daohu527/map
 TAG="${REPO}:ndt-x86-18.04"
 
-docker pull "${TAG}"
-
 docker build -t "${TAG}" -f ndt.x86.dockerfile .
 
 # push docker to hub.docker.com
