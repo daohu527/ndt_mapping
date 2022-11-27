@@ -7,7 +7,7 @@ licenses(["notice"])
 cc_library(
     name = "pcl",
     includes = [
-        "/usr/include/pcl-1.8/pcl/*",
+        ".",
     ],
     linkopts = [
         "-L/usr/local/lib",

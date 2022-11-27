@@ -68,7 +68,7 @@ using PointCloudConstPtr = const pcl::PointCloud<Point>::Ptr;
 // filter
 DEFINE_double(min_scan_range, 25.0, "the square of the min scan range");
 DEFINE_double(max_scan_range, 10000.0, "the square of the max scan range");
-DEFINE_double(min_add_scan_shift, 1.0, "the square of the min add scan length");
+DEFINE_double(min_add_scan_shift, 5.0, "the square of the min add scan length");
 DEFINE_double(voxel_leaf_size, 2.0, "voxel leaf size");
 // ndt
 DEFINE_double(trans_eps, 0.01, "transformation epsilon");
@@ -79,14 +79,19 @@ DEFINE_int32(max_iter, 30, "maximum iterations times");
 DEFINE_string(output_file, "data/output.pcd", "map save file path");
 DEFINE_string(workspace_dir, "data/pcd", "work dir");
 
+// key pose
+size_t CACHE_SIZE = 3;
+std::list<PointCloudPtr> cache_key_frames;
+
 // the whole map
-PointCloudPtr map_ptr(new PointCloud());
+PointCloudPtr global_map(new PointCloud());
+PointCloudPtr local_map(new PointCloud());
 bool is_first_map = true;
 
 // runtime pose
-Eigen::Affine3d added_pose = Eigen::Affine3d::Identity();
 Eigen::Affine3d current_pose = Eigen::Affine3d::Identity();
 Eigen::Affine3d previous_pose = Eigen::Affine3d::Identity();
+Eigen::Affine3d previous_key_pose = Eigen::Affine3d::Identity();
 
 // lidar pose
 std::vector<Eigen::Affine3d, Eigen::aligned_allocator<Eigen::Affine3d>> pcd_poses;
@@ -98,6 +103,13 @@ pcl::NormalDistributionsTransform<Point, Point> ndt;
 
 //
 std::unique_ptr<AsyncBuffer> async_buffer_ptr;
+
+
+void Affine3dToPoint(const Eigen::Affine3d& affine3d_pose, Point* pose) {
+  pose->x = affine3d_pose.translation().x();
+  pose->y = affine3d_pose.translation().y();
+  pose->z = affine3d_pose.translation().z();
+}
 
 void Init() {
   // ndt
@@ -213,7 +225,9 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   // When creating the map for the first time,
   // get the first frame and add it to the map, then return
   if (is_first_map) {
-    *map_ptr += *scan_ptr;
+    *global_map += *scan_ptr;
+    *local_map += *scan_ptr;
+    cache_key_frames.push_back(scan_ptr);
     is_first_map = false;
     return;
   }
@@ -222,7 +236,7 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   VoxelFilter(scan_ptr, voxel_ptr);
 
   ndt.setInputSource(voxel_ptr);
-  ndt.setInputTarget(map_ptr);
+  ndt.setInputTarget(local_map);
 
   // Get the relative pose between 2 frames
   Eigen::Affine3d relative_pose = GetLidarRelativePose();
@@ -251,12 +265,23 @@ void LidarProcess(PointCloudPtr cloud_ptr) {
   current_pose = t_localizer.cast<double>();
   previous_pose = current_pose;
 
-  double shift = SquaredDistance(current_pose, added_pose);
+  double shift = SquaredDistance(current_pose, previous_key_pose);
   if (shift >= FLAGS_min_add_scan_shift) {
     PointCloudPtr transformed_scan_ptr(new PointCloud());
     pcl::transformPointCloud(*scan_ptr, *transformed_scan_ptr, t_localizer);
-    *map_ptr += *transformed_scan_ptr;
-    added_pose = current_pose;
+    *global_map += *transformed_scan_ptr;
+
+    if (cache_key_frames.size() > CACHE_SIZE) {
+      cache_key_frames.pop_front();
+    }
+    cache_key_frames.push_back(transformed_scan_ptr);
+
+    local_map->clear();
+    for (auto key_frame : cache_key_frames) {
+      *local_map += *key_frame;
+    }
+
+    previous_key_pose = current_pose;
   }
 
   // Todo(zero): Add for online mode
@@ -286,9 +311,9 @@ void SaveMap() {
   auto euler = quaterniond.normalized().toRotationMatrix().eulerAngles(0, 1, 2);
   std::cout << "Align rotation roll, pitch, yaw " << euler << std::endl;
 
-  // CHECK(map_ptr != nullptr) << "map is null";
+  // CHECK(global_map != nullptr) << "map is null";
   PointCloudPtr align_map_ptr(new PointCloud());
-  pcl::transformPointCloud(*map_ptr, *align_map_ptr, align_pose.matrix());
+  pcl::transformPointCloud(*global_map, *align_map_ptr, align_pose.matrix());
 
   std::cout << std::setprecision(15) << "UTM relative coordinates"
         << " x: " << init_pose.translation().x()
