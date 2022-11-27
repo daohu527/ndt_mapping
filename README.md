@@ -33,7 +33,7 @@ Compile the code according to the following steps.
 #### 1.Unzip the bag
 Extract the pcd file and pose file from the bag. You can use multiple "--bag_file" to extract multiple bag files. The decompressed file is saved in `--out_folder`.
 ```
-./bazel-bin/modules/localization/msf/local_tool/data_extraction/cyber_record_parser --bag_file=data/bag/20210514100819.record.00000 --bag_file=data/bag/20210514100819.record.00001 --out_folder=data --cloud_topic=/apollo/sensor/rs32/PointCloud2
+./bazel-bin/modules/localization/msf/local_tool/data_extraction/cyber_record_parser --bag_file=data/bag/demo_sensor_data_for_vision.record  --out_folder=data --cloud_topic=/apollo/sensor/velodyne64/compensator/PointCloud2
 ```
 
 #### 2.Poses interpolation
