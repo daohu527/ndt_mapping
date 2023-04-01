@@ -208,7 +208,8 @@ Eigen::Affine3d GetLidarRelativePose() {
   return relative_pose;
 }
 
-double SquaredDistance(Eigen::Affine3d first, Eigen::Affine3d second) {
+double SquaredDistance(const Eigen::Affine3d& first,
+                       const Eigen::Affine3d& second) {
   Eigen::Translation3d first_transd(first.translation());
   Eigen::Translation3d second_transd(second.translation());
 
